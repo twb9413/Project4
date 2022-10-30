@@ -1,0 +1,2 @@
+../Core/Src/rng_helper.c:15:9:get_random_position	16	static
+../Core/Src/rng_helper.c:27:10:get_random_delay	24	static

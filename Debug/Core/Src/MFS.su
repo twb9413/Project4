@@ -1,0 +1,3 @@
+../Core/Src/MFS.c:28:6:shiftOut	24	static
+../Core/Src/MFS.c:46:6:WriteNumberToSegment	16	static
+../Core/Src/MFS.c:55:6:display_score	32	static
