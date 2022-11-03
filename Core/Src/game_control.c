@@ -7,12 +7,13 @@
  */
 
 #include "game_control.h"
-
+#include "stdio.h"
 // file variables
 Game_t game;
 extern Servo_t servo_player;
 extern Servo_t servo_cpu;
 extern UART_HandleTypeDef huart2;
+extern TIM_HandleTypeDef htim2;
 
 // function prototypes
 void handle_btn1();
@@ -64,22 +65,25 @@ void set_game_state(GAME_STATE game_state)
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	switch(GPIO_Pin)
+	static uint32_t prev_btn_press;
+	uint32_t this_btn_press = TIM2->CNT;
+	uint32_t time_elapsed = this_btn_press - prev_btn_press;
+	if(time_elapsed > 150000)
 	{
-	case ShieldBtn1_Pin:
-		HAL_UART_Transmit(&huart2, (uint8_t *) "\n\rbtn1", 6, HAL_MAX_DELAY);
-		handle_btn1();
-		break;
-	case ShieldBtn2_Pin:
-		HAL_UART_Transmit(&huart2, (uint8_t *) "\n\rbtn2", 6, HAL_MAX_DELAY);
-		handle_btn2();
-		break;
-	case ShieldBtn3_Pin:
-		HAL_UART_Transmit(&huart2, (uint8_t *) "\n\rbtn3", 6, HAL_MAX_DELAY);
-		handle_btn3();
-		break;
+		switch(GPIO_Pin)
+		{
+		case ShieldBtn1_Pin:
+			handle_btn1();
+			break;
+		case ShieldBtn2_Pin:
+			handle_btn2();
+			break;
+		case ShieldBtn3_Pin:
+			handle_btn3();
+			break;
+		}
+		prev_btn_press = this_btn_press;
 	}
-	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_Pin); // having issue with shield reading 2 button presses instead of 1, clear the interrupt here
 }
 
 /*
@@ -107,7 +111,6 @@ void handle_btn1()
 		break;
 	case PLAYING:
 		// btn1 to move right
-		HAL_UART_Transmit(&huart2, (uint8_t *) "\n\rMOVING LEFT", 13, HAL_MAX_DELAY);
 		move_servo_left(&servo_player);
 		break;
 	case OVER:
@@ -193,7 +196,6 @@ void handle_btn3()
 		decrement_pos5_duty_cycle(&servo_cpu);
 		break;
 	case PLAYING:
-		HAL_UART_Transmit(&huart2, (uint8_t *) "\n\rMOVING RIGHT", 14, HAL_MAX_DELAY);
 		move_servo_right(&servo_player);
 		break;
 	default:
@@ -207,6 +209,7 @@ void handle_btn3()
  */
 void game_task()
 {
+	HAL_TIM_Base_Start(&htim2);
 	start_game();
 	uint16_t delay;
 	while(1)
@@ -249,7 +252,7 @@ void score_task()
 				if(servo_player.servo_position != servo_cpu.servo_position &&
 						servo_cpu.SERVO_STATE == STABLE)
 					game.score += 1;
-				vTaskDelay(10 / portTICK_PERIOD_MS);
+				vTaskDelay(1 / portTICK_PERIOD_MS);
 			}
 			break;
 		default:

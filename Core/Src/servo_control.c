@@ -20,8 +20,8 @@ void init_servo(Servo_t *servo, uint8_t servo_id)
 	servo->ID = servo_id;
 	servo->SERVO_STATE = STABLE;
 	servo->servo_position = 0;
-	servo->duty_cycle_arr[POS0] = 70; // estimate of position 0 to be calibrated from
-	servo->duty_cycle_arr[POS5] = 180; // initial guess for position 5 to be calibrated from
+	servo->duty_cycle_arr[POS0] = 60; // estimate of position 0 to be calibrated from
+	servo->duty_cycle_arr[POS5] = 200; // initial guess for position 5 to be calibrated from
 }
 
 /*
@@ -119,8 +119,13 @@ void move_servo_to_pos(Servo_t *servo, uint8_t position)
 	servo->SERVO_STATE = STABLE;
 }
 
+/*
+ * move_cpu_to_random_pos()
+ * 	moves the cpu servo to a *new* random position
+ */
 void move_cpu_to_random_pos()
 {
+	uint8_t old_position = servo_cpu.servo_position;
 	// get a random position
 	uint8_t position = get_random_position();
 	// ensure not moving to same position
@@ -128,7 +133,13 @@ void move_cpu_to_random_pos()
 	{
 		position = get_random_position();
 	}
-	move_servo_to_pos(&servo_cpu, position);
+	servo_cpu.SERVO_STATE = MOVING;
+	servo_cpu.servo_position = position;
+	set_pwm(SERVO_CPU, servo_cpu.duty_cycle_arr[position]);
+	// wait before setting servo stable
+	// allow it time to travel to new position
+	vTaskDelay(((abs(old_position - position)) * 200) / portTICK_PERIOD_MS);
+	servo_cpu.SERVO_STATE = STABLE;
 }
 
 /*
